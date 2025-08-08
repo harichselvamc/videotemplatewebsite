@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Meme Video Templates</title>
+  <style>
+    :root {
+      --primary-color: #007bff;
+      --bg-color: #f8f9fa;
+      --card-bg: #fff;
+      --text-color: #333;
+      --border-radius: 10px;
+      --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      margin: 0;
+      padding: 20px;
+      color: var(--text-color);
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--primary-color);
+      margin-bottom: 30px;
+    }
+
+    #searchInput {
+      width: 100%;
+      max-width: 600px;
+      display: block;
+      margin: 0 auto 30px auto;
+      padding: 14px 18px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+    }
+
+    #videoContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .video-card {
+      background-color: var(--card-bg);
+      padding: 20px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+    }
+
+    .video-card h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #222;
+    }
+
+    .video-card p {
+      margin: 4px 0;
+      font-size: 15px;
+    }
+
+    video {
+      width: 100%;
+      max-height: 400px;
+      margin: 15px 0;
+      border-radius: var(--border-radius);
+    }
+
+    .download {
+      display: inline-block;
+      padding: 10px 16px;
+      background-color: var(--primary-color);
+      color: white;
+      text-decoration: none;
+      border-radius: var(--border-radius);
+      transition: background-color 0.3s;
+    }
+
+    .download:hover {
+      background-color: #0056b3;
+    }
+
+    .related {
+      margin-top: 25px;
+      border-top: 1px solid #ddd;
+      padding-top: 15px;
+    }
+
+    .related h4 {
+      margin-bottom: 10px;
+      font-size: 16px;
+      color: #555;
+    }
+
+    .related-video {
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .related-video a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+
+    .related-video a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 15px;
+      }
+
+      #searchInput {
+        font-size: 15px;
+        padding: 12px;
+      }
+
+      .download {
+        font-size: 14px;
+        padding: 8px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Meme Video Templates</h1>
+
+  <input type="text" id="searchInput" placeholder="Search by movie, hero, year, or language..."/>
+
+  <div id="videoContainer"></div>
+
+  <script src="database.js"></script>
+  <script>
+    const container = document.getElementById("videoContainer");
+    const searchInput = document.getElementById("searchInput");
+
+    function renderVideos(filteredVideos) {
+      container.innerHTML = "";
+
+      filteredVideos.forEach(video => {
+        const videoDiv = document.createElement("div");
+        videoDiv.className = "video-card";
+
+        videoDiv.innerHTML = `
+          <h3>${video.title}</h3>
+          <p><strong>Movie:</strong> ${video.movie} | <strong>Hero:</strong> ${video.hero}</p>
+          <p><strong>Year:</strong> ${video.year} | <strong>Language:</strong> ${video.language}</p>
+          <video controls src="${video.videoUrl}"></video>
+          <a href="${video.videoUrl}" class="download" download>Download</a>
+        `;
+
+        // Related videos (excluding current)
+        const related = videos.filter(v =>
+          v !== video && (
+            v.movie === video.movie ||
+            v.hero === video.hero ||
+            v.year === video.year
+          )
+        );
+
+        if (related.length > 0) {
+          const relatedDiv = document.createElement("div");
+          relatedDiv.className = "related";
+          relatedDiv.innerHTML = "<h4>Related Videos:</h4>";
+
+          related.forEach(rel => {
+            const relVideo = document.createElement("div");
+            relVideo.className = "related-video";
+            relVideo.innerHTML = `
+              <strong>${rel.title}</strong> (${rel.movie}, ${rel.hero}, ${rel.year})<br/>
+              <a href="${rel.videoUrl}" download>Download</a>
+            `;
+            relatedDiv.appendChild(relVideo);
+          });
+
+          videoDiv.appendChild(relatedDiv);
+        }
+
+        container.appendChild(videoDiv);
+      });
+    }
+
+    // Initial load
+    renderVideos(videos);
+
+    // Search functionality
+    searchInput.addEventListener("input", () => {
+      const term = searchInput.value.toLowerCase();
+      const filtered = videos.filter(video =>
+        video.title.toLowerCase().includes(term) ||
+        video.movie.toLowerCase().includes(term) ||
+        video.hero.toLowerCase().includes(term) ||
+        video.language.toLowerCase().includes(term) ||
+        video.year.toString().includes(term)
+      );
+      renderVideos(filtered);
+    });
+  </script>
+</body>
+</html>
