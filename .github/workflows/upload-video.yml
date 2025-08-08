@@ -1,0 +1,55 @@
+name: Upload Meme Video and Update Database
+
+on:
+  push:
+    paths:
+      - '.github/tmp/pending_upload.json'
+
+jobs:
+  process-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v3
+
+      - name: Install jq (for JSON parsing)
+        run: sudo apt-get install jq
+
+      - name: Extract data from pending_upload.json
+        id: extract
+        run: |
+          TITLE=$(jq -r '.title' .github/tmp/pending_upload.json | tr ' ' '_' | tr -cd '[:alnum:]_')
+          FILE_NAME="${TITLE}.mp4"
+          echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
+          jq -r '.videoBase64' .github/tmp/pending_upload.json | base64 -d > videos/$FILE_NAME
+
+          # Extract metadata
+          MOVIE=$(jq -r '.meta.movie' .github/tmp/pending_upload.json)
+          HERO=$(jq -r '.meta.hero' .github/tmp/pending_upload.json)
+          YEAR=$(jq -r '.meta.year' .github/tmp/pending_upload.json)
+          LANGUAGE=$(jq -r '.meta.language' .github/tmp/pending_upload.json)
+
+          # Create new entry
+          echo "{
+            \"title\": \"${TITLE//_/ }\",
+            \"movie\": \"$MOVIE\",
+            \"hero\": \"$HERO\",
+            \"year\": $YEAR,
+            \"language\": \"$LANGUAGE\",
+            \"videoUrl\": \"videos/$FILE_NAME\"
+          }" > .github/tmp/new_entry.json
+
+      - name: Update data.json with new entry
+        run: |
+          if [ ! -f data.json ]; then echo "[]" > data.json; fi
+          jq -s '.[0] + [.[1]]' data.json .github/tmp/new_entry.json > data_new.json
+          mv data_new.json data.json
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Action Bot"
+          git config user.email "action@github.com"
+          git add videos/*.mp4 data.json
+          git commit -m "📹 Add new meme video from queue"
+          git push

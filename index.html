@@ -5,204 +5,227 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Meme Video Templates</title>
   <style>
-    :root {
-      --primary-color: #007bff;
-      --bg-color: #f8f9fa;
-      --card-bg: #fff;
-      --text-color: #333;
-      --border-radius: 10px;
-      --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg-color);
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
       margin: 0;
       padding: 20px;
-      color: var(--text-color);
     }
 
-    h1 {
+    h1, h2 {
       text-align: center;
-      color: var(--primary-color);
-      margin-bottom: 30px;
+      color: #007bff;
     }
 
-    #searchInput {
-      width: 100%;
+    #uploadForm {
       max-width: 600px;
-      display: block;
-      margin: 0 auto 30px auto;
-      padding: 14px 18px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    #uploadForm input, #uploadForm button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 12px;
       font-size: 16px;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      border-radius: var(--border-radius);
-      box-shadow: var(--box-shadow);
+    }
+
+    #uploadForm button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    #uploadForm button:hover {
+      background-color: #0056b3;
+    }
+
+    .status {
+      text-align: center;
+      font-weight: bold;
+      color: green;
     }
 
     #videoContainer {
+      max-width: 900px;
+      margin: 40px auto;
       display: flex;
       flex-direction: column;
       gap: 30px;
-      max-width: 900px;
-      margin: 0 auto;
     }
 
     .video-card {
-      background-color: var(--card-bg);
+      background: white;
       padding: 20px;
-      border-radius: var(--border-radius);
-      box-shadow: var(--box-shadow);
-    }
-
-    .video-card h3 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      color: #222;
-    }
-
-    .video-card p {
-      margin: 4px 0;
-      font-size: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
 
     video {
       width: 100%;
       max-height: 400px;
-      margin: 15px 0;
-      border-radius: var(--border-radius);
+      margin-top: 10px;
+      border-radius: 10px;
     }
 
     .download {
       display: inline-block;
-      padding: 10px 16px;
-      background-color: var(--primary-color);
+      margin-top: 10px;
+      padding: 10px 15px;
+      background-color: #007bff;
       color: white;
       text-decoration: none;
-      border-radius: var(--border-radius);
-      transition: background-color 0.3s;
+      border-radius: 6px;
     }
 
     .download:hover {
       background-color: #0056b3;
     }
 
-    .related {
-      margin-top: 25px;
-      border-top: 1px solid #ddd;
-      padding-top: 15px;
-    }
-
-    .related h4 {
-      margin-bottom: 10px;
-      font-size: 16px;
-      color: #555;
-    }
-
-    .related-video {
-      margin-bottom: 10px;
-      font-size: 14px;
-    }
-
-    .related-video a {
-      color: var(--primary-color);
-      text-decoration: none;
-    }
-
-    .related-video a:hover {
-      text-decoration: underline;
-    }
-
     @media (max-width: 600px) {
-      body {
-        padding: 15px;
-      }
-
-      #searchInput {
-        font-size: 15px;
-        padding: 12px;
-      }
-
-      .download {
+      #uploadForm input, #uploadForm button {
         font-size: 14px;
-        padding: 8px 14px;
+        padding: 10px;
       }
     }
   </style>
 </head>
 <body>
-  <h1>Meme Video Templates</h1>
 
-  <input type="text" id="searchInput" placeholder="Search by movie, hero, year, or language..."/>
+  <h1>Meme Video Templates</h1>
+  <div class="status" id="backendStatus">Checking backend status...</div>
+
+  <h2>Submit a Meme Template</h2>
+  <form id="uploadForm">
+    <input type="text" name="title" placeholder="Title" required />
+    <input type="text" name="movie" placeholder="Movie" required />
+    <input type="text" name="hero" placeholder="Hero" required />
+    <input type="number" name="year" placeholder="Year" required />
+    <input type="text" name="language" placeholder="Language" required />
+    <input type="url" name="instaUrl" placeholder="Instagram Video URL" required />
+    <button type="submit">Submit</button>
+  </form>
 
   <div id="videoContainer"></div>
 
-  <script src="database.js"></script>
   <script>
-    const container = document.getElementById("videoContainer");
-    const searchInput = document.getElementById("searchInput");
+    const backendURL = 'https://memetemplate-website-backend.onrender.com';
+    let backendOnline = false;
+    let pendingQueue = [];
 
-    function renderVideos(filteredVideos) {
-      container.innerHTML = "";
+    const statusEl = document.getElementById('backendStatus');
+    const form = document.getElementById('uploadForm');
+    const videoContainer = document.getElementById('videoContainer');
 
-      filteredVideos.forEach(video => {
-        const videoDiv = document.createElement("div");
-        videoDiv.className = "video-card";
+    // Ping backend every 10 seconds
+    function keepBackendAlive() {
+      fetch(`${backendURL}/ping`)
+        .then(res => res.json())
+        .then(data => {
+          backendOnline = true;
+          statusEl.textContent = "✅ Backend is online";
+          statusEl.style.color = "green";
+          processPendingQueue();
+        })
+        .catch(() => {
+          backendOnline = false;
+          statusEl.textContent = "⚠️ Backend is offline. Requests will be queued.";
+          statusEl.style.color = "red";
+        });
+    }
 
-        videoDiv.innerHTML = `
+    setInterval(keepBackendAlive, 10000);
+    keepBackendAlive(); // run immediately
+
+    // Submit form
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const data = {
+        title: form.title.value,
+        movie: form.movie.value,
+        hero: form.hero.value,
+        year: form.year.value,
+        language: form.language.value,
+        instaUrl: form.instaUrl.value
+      };
+
+      if (backendOnline) {
+        sendToBackend(data);
+      } else {
+        pendingQueue.push(data);
+        alert("Backend is sleeping. We'll send this when it's awake.");
+      }
+
+      form.reset();
+    });
+
+    // Process queue
+    function processPendingQueue() {
+      if (!backendOnline || pendingQueue.length === 0) return;
+      const next = pendingQueue.shift();
+      sendToBackend(next);
+    }
+
+    // Send to backend
+    function sendToBackend(data) {
+      fetch(`${backendURL}/api/addToQueue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+        .then(res => res.json())
+        .then(res => {
+          if (res.success) {
+            alert(`Video "${data.title}" submitted successfully!`);
+            console.log("Backend returned downloadData:", res.downloadData);
+
+            // Store in a file or trigger GitHub Action manually here (next step)
+            // For now, just log to console
+          } else {
+            alert("Something went wrong with the backend.");
+            pendingQueue.push(data); // retry later
+          }
+        })
+        .catch(err => {
+          console.error("Error:", err);
+          pendingQueue.push(data);
+        });
+    }
+
+    // Load existing videos
+    fetch('data.json')
+      .then(res => res.json())
+      .then(data => {
+        renderVideos(data);
+      })
+      .catch(() => {
+        videoContainer.innerHTML = "<p>❌ Couldn't load videos. Check your data.json.</p>";
+      });
+
+    function renderVideos(videos) {
+      videoContainer.innerHTML = "";
+
+      videos.reverse().forEach(video => {
+        const div = document.createElement("div");
+        div.className = "video-card";
+
+        div.innerHTML = `
           <h3>${video.title}</h3>
           <p><strong>Movie:</strong> ${video.movie} | <strong>Hero:</strong> ${video.hero}</p>
           <p><strong>Year:</strong> ${video.year} | <strong>Language:</strong> ${video.language}</p>
           <video controls src="${video.videoUrl}"></video>
-          <a href="${video.videoUrl}" class="download" download>Download</a>
+          <a class="download" href="${video.videoUrl}" download>Download</a>
         `;
-
-        // Related videos (excluding current)
-        const related = videos.filter(v =>
-          v !== video && (
-            v.movie === video.movie ||
-            v.hero === video.hero ||
-            v.year === video.year
-          )
-        );
-
-        if (related.length > 0) {
-          const relatedDiv = document.createElement("div");
-          relatedDiv.className = "related";
-          relatedDiv.innerHTML = "<h4>Related Videos:</h4>";
-
-          related.forEach(rel => {
-            const relVideo = document.createElement("div");
-            relVideo.className = "related-video";
-            relVideo.innerHTML = `
-              <strong>${rel.title}</strong> (${rel.movie}, ${rel.hero}, ${rel.year})<br/>
-              <a href="${rel.videoUrl}" download>Download</a>
-            `;
-            relatedDiv.appendChild(relVideo);
-          });
-
-          videoDiv.appendChild(relatedDiv);
-        }
-
-        container.appendChild(videoDiv);
+        videoContainer.appendChild(div);
       });
     }
-
-    // Initial load
-    renderVideos(videos);
-
-    // Search functionality
-    searchInput.addEventListener("input", () => {
-      const term = searchInput.value.toLowerCase();
-      const filtered = videos.filter(video =>
-        video.title.toLowerCase().includes(term) ||
-        video.movie.toLowerCase().includes(term) ||
-        video.hero.toLowerCase().includes(term) ||
-        video.language.toLowerCase().includes(term) ||
-        video.year.toString().includes(term)
-      );
-      renderVideos(filtered);
-    });
   </script>
+
 </body>
 </html>
