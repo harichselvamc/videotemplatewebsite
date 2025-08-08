@@ -3,228 +3,170 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Meme Video Templates</title>
+  <title>Meme Video Upload</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
+      background-color: #f1f1f1;
       margin: 0;
-      padding: 20px;
+      padding: 0;
     }
 
-    h1, h2 {
-      text-align: center;
-      color: #007bff;
-    }
-
-    #uploadForm {
-      max-width: 600px;
-      margin: 20px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    #uploadForm input, #uploadForm button {
-      width: 100%;
-      margin: 10px 0;
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
-    #uploadForm button {
+    header {
       background-color: #007bff;
       color: white;
-      border: none;
-      cursor: pointer;
+      padding: 20px 0;
+      text-align: center;
     }
 
-    #uploadForm button:hover {
-      background-color: #0056b3;
+    .container {
+      max-width: 700px;
+      margin: 40px auto;
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      color: #333;
+      text-align: center;
     }
 
     .status {
       text-align: center;
       font-weight: bold;
-      color: green;
+      margin-bottom: 20px;
     }
 
-    #videoContainer {
-      max-width: 900px;
-      margin: 40px auto;
+    form {
       display: flex;
       flex-direction: column;
-      gap: 30px;
+      gap: 15px;
     }
 
-    .video-card {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    input[type="text"],
+    input[type="number"],
+    input[type="url"],
+    input[type="file"] {
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
     }
 
-    video {
-      width: 100%;
-      max-height: 400px;
-      margin-top: 10px;
-      border-radius: 10px;
-    }
-
-    .download {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 10px 15px;
+    button {
+      padding: 12px;
+      font-size: 16px;
       background-color: #007bff;
       color: white;
-      text-decoration: none;
+      border: none;
       border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s;
     }
 
-    .download:hover {
+    button:hover {
       background-color: #0056b3;
     }
 
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 14px;
+      color: #777;
+    }
+
     @media (max-width: 600px) {
-      #uploadForm input, #uploadForm button {
-        font-size: 14px;
-        padding: 10px;
+      .container {
+        margin: 20px;
+        padding: 20px;
+      }
+
+      input, button {
+        font-size: 15px;
       }
     }
   </style>
 </head>
 <body>
 
-  <h1>Meme Video Templates</h1>
-  <div class="status" id="backendStatus">Checking backend status...</div>
+  <header>
+    <h1>Meme Template Uploader 🎬</h1>
+  </header>
 
-  <h2>Submit a Meme Template</h2>
-  <form id="uploadForm">
-    <input type="text" name="title" placeholder="Title" required />
-    <input type="text" name="movie" placeholder="Movie" required />
-    <input type="text" name="hero" placeholder="Hero" required />
-    <input type="number" name="year" placeholder="Year" required />
-    <input type="text" name="language" placeholder="Language" required />
-    <input type="url" name="instaUrl" placeholder="Instagram Video URL" required />
-    <button type="submit">Submit</button>
-  </form>
+  <div class="container">
+    <div class="status" id="backendStatus">🔄 Checking backend...</div>
 
-  <div id="videoContainer"></div>
+    <h2>Upload a Meme Video</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="text" name="title" placeholder="Title" required />
+      <input type="text" name="movie" placeholder="Movie" required />
+      <input type="text" name="hero" placeholder="Hero" required />
+      <input type="number" name="year" placeholder="Year" required />
+      <input type="text" name="language" placeholder="Language" required />
+      <input type="file" name="videoFile" accept="video/mp4" required />
+      <button type="submit">Upload Video</button>
+    </form>
+  </div>
+
+  <div class="footer">
+    Built with ❤️ | Video gets pushed to GitHub automatically
+  </div>
 
   <script>
     const backendURL = 'https://memetemplate-website-backend.onrender.com';
-    let backendOnline = false;
-    let pendingQueue = [];
-
     const statusEl = document.getElementById('backendStatus');
     const form = document.getElementById('uploadForm');
-    const videoContainer = document.getElementById('videoContainer');
 
-    // Ping backend every 10 seconds
-    function keepBackendAlive() {
+    let backendOnline = false;
+
+    function pingBackend() {
       fetch(`${backendURL}/ping`)
         .then(res => res.json())
-        .then(data => {
+        .then(() => {
           backendOnline = true;
           statusEl.textContent = "✅ Backend is online";
           statusEl.style.color = "green";
-          processPendingQueue();
         })
         .catch(() => {
           backendOnline = false;
-          statusEl.textContent = "⚠️ Backend is offline. Requests will be queued.";
+          statusEl.textContent = "⚠️ Backend is offline";
           statusEl.style.color = "red";
         });
     }
 
-    setInterval(keepBackendAlive, 10000);
-    keepBackendAlive(); // run immediately
+    pingBackend();
+    setInterval(pingBackend, 10000);
 
-    // Submit form
-    form.addEventListener("submit", function (e) {
+    form.addEventListener('submit', function (e) {
       e.preventDefault();
-      const data = {
-        title: form.title.value,
-        movie: form.movie.value,
-        hero: form.hero.value,
-        year: form.year.value,
-        language: form.language.value,
-        instaUrl: form.instaUrl.value
-      };
 
-      if (backendOnline) {
-        sendToBackend(data);
-      } else {
-        pendingQueue.push(data);
-        alert("Backend is sleeping. We'll send this when it's awake.");
+      if (!backendOnline) {
+        alert("❌ Backend is offline. Please try again later.");
+        return;
       }
+
+      const formData = new FormData(form);
+
+      fetch(`${backendURL}/api/uploadVideo`, {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          alert("✅ Video uploaded and pushed to GitHub!");
+        } else {
+          alert("❌ Upload failed: " + res.error);
+        }
+      })
+      .catch(() => {
+        alert("❌ Network error. Try again.");
+      });
 
       form.reset();
     });
-
-    // Process queue
-    function processPendingQueue() {
-      if (!backendOnline || pendingQueue.length === 0) return;
-      const next = pendingQueue.shift();
-      sendToBackend(next);
-    }
-
-    // Send to backend
-    function sendToBackend(data) {
-      fetch(`${backendURL}/api/addToQueue`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-        .then(res => res.json())
-        .then(res => {
-          if (res.success) {
-            alert(`Video "${data.title}" submitted successfully!`);
-            console.log("Backend returned downloadData:", res.downloadData);
-
-            // Store in a file or trigger GitHub Action manually here (next step)
-            // For now, just log to console
-          } else {
-            alert("Something went wrong with the backend.");
-            pendingQueue.push(data); // retry later
-          }
-        })
-        .catch(err => {
-          console.error("Error:", err);
-          pendingQueue.push(data);
-        });
-    }
-
-    // Load existing videos
-    fetch('data.json')
-      .then(res => res.json())
-      .then(data => {
-        renderVideos(data);
-      })
-      .catch(() => {
-        videoContainer.innerHTML = "<p>❌ Couldn't load videos. Check your data.json.</p>";
-      });
-
-    function renderVideos(videos) {
-      videoContainer.innerHTML = "";
-
-      videos.reverse().forEach(video => {
-        const div = document.createElement("div");
-        div.className = "video-card";
-
-        div.innerHTML = `
-          <h3>${video.title}</h3>
-          <p><strong>Movie:</strong> ${video.movie} | <strong>Hero:</strong> ${video.hero}</p>
-          <p><strong>Year:</strong> ${video.year} | <strong>Language:</strong> ${video.language}</p>
-          <video controls src="${video.videoUrl}"></video>
-          <a class="download" href="${video.videoUrl}" download>Download</a>
-        `;
-        videoContainer.appendChild(div);
-      });
-    }
   </script>
 
 </body>
