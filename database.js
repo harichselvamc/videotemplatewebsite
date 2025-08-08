@@ -15,4 +15,12 @@
         language: "tamil",
         videoUrl: "videos/sirikadha.mp4"
       },
+      {
+        title: "i dont care",
+        movie: "DMK",
+        hero: "stalin",
+        year: 2020,
+        language: "tamil",
+        videoUrl: "videos/idontcare.mp4"
+      },
     ];
