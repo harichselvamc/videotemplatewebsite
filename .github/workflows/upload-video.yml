@@ -27,14 +27,12 @@ jobs:
           YEAR=$(jq -r '.meta.year' .github/tmp/pending_upload.json)
           LANG=$(jq -r '.meta.language' .github/tmp/pending_upload.json)
 
-          echo "{
-            \"title\": \"${TITLE//_/ }\",
-            \"movie\": \"$MOVIE\",
-            \"hero\": \"$HERO\",
-            \"year\": $YEAR,
-            \"language\": \"$LANG\",
-            \"videoUrl\": \"$FILE\"
-          }" > .github/tmp/new_entry.json
+          echo "{\"title\":\"${TITLE//_/ }\",
+          \"movie\":\"$MOVIE\",
+          \"hero\":\"$HERO\",
+          \"year\":${YEAR:-0},
+          \"language\":\"$LANG\",
+          \"videoUrl\":\"$FILE\"}" > .github/tmp/new_entry.json
 
       - name: Update data.json
         run: |
